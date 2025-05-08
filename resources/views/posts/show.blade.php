@@ -1,4 +1,3 @@
-
 @extends('layouts.app')
 
 @section('title', $post->title)
@@ -50,9 +49,53 @@
                             </div>
                         @endif
                     </div>
+                    
+                    <div class="d-flex align-items-center mt-3">
+                        <button class="btn btn-link like-button" data-post-id="{{ $post->id }}" data-liked="{{ $post->isLikedBy(auth()->user()) ? 'true' : 'false' }}">
+                            <i class="fas fa-heart {{ $post->isLikedBy(auth()->user()) ? 'text-danger' : 'text-secondary' }}"></i>
+                            <span class="likes-count">{{ $post->likes_count }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection 
+@endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const likeButtons = document.querySelectorAll('.like-button');
+    
+    likeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const icon = this.querySelector('i');
+            const countSpan = this.querySelector('.likes-count');
+            
+            fetch(`/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.liked) {
+                    icon.classList.remove('text-secondary');
+                    icon.classList.add('text-danger');
+                } else {
+                    icon.classList.remove('text-danger');
+                    icon.classList.add('text-secondary');
+                }
+                countSpan.textContent = data.likes_count;
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+});
+</script>
+@endpush 

@@ -10,6 +10,7 @@ use App\Http\Controllers\ChatGroupController;
 use App\Http\Controllers\GroupMessageController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\LikeController;
 
 // Route mặc định, hiển thị trang chào mừng
 Route::get('/', function () {
@@ -70,6 +71,9 @@ Route::middleware('auth')->group(function () {
         ->name('group.messages.store'); // Gửi tin nhắn vào nhóm
     Route::get('chat-groups/{group}/messages/check', [GroupMessageController::class, 'checkNewMessages'])
         ->name('group.messages.check'); // Kiểm tra tin nhắn mới trong nhóm
+
+    // Like routes
+    Route::post('/posts/{post}/like', [LikeController::class, 'toggle'])->name('posts.like');
 });
 
 /**

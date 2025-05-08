@@ -1,4 +1,3 @@
-@ -1,222 +0,0 @@
 @extends('layouts.app')
 
 @section('title', 'Bảng tin')
@@ -94,6 +93,50 @@
         transform: translateX(3px);
     }
 
+    /* Style cho nút like */
+    .like-button {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .like-button:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+    }
+
+    .like-button i {
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+
+    .like-button:hover i {
+        transform: scale(1.1);
+    }
+
+    .like-button.liked {
+        background-color: #fff5f5;
+        border-color: #ffcdd2;
+        color: #e53935;
+    }
+
+    .like-button.liked i {
+        color: #e53935;
+    }
+
+    .likes-count {
+        font-weight: 500;
+        min-width: 1.5rem;
+        text-align: center;
+    }
+
     /* Style cho phân trang */
     .pagination {
         margin-top: 2rem;
@@ -149,75 +192,94 @@
 
 @section('content')
 <div class="container py-4">
-    {{-- Thêm class page-title --}}
-    <h4 class="page-title mb-4">Bảng tin</h4>
-    
-    @if($posts->count() > 0)
-        <div class="row">
-            @foreach($posts as $index => $post)
-                {{-- Thêm animation-delay cho từng card --}}
-                <div class="col-md-12" style="animation-delay: {{ $index * 0.1 }}s;">
-                    <div class="card post-card">
-                        <div class="card-body">
-                            {{-- Thêm link cho tiêu đề --}}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="page-title mb-0">Bảng tin</h2>
+                <a href="{{ route('posts.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Tạo bài viết mới
+                </a>
+            </div>
+
+            @if(session('success'))
+                <div class="alert alert-success">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @forelse($posts as $post)
+                <div class="card post-card">
+                    <div class="card-body">
+                        <h5 class="post-title">
                             <a href="{{ route('posts.show', $post) }}" class="text-decoration-none">
-                                <h5 class="post-title">{{ $post->title }}</h5>
+                                {{ $post->title }}
                             </a>
-
-                            {{-- Cải thiện hiển thị meta info --}}
-                            <div class="post-meta">
-                                <span>
-                                    <i class="fas fa-user-circle"></i>
-                                    {{ $post->user->name }}
-                                </span>
-                                <span>
-                                    <i class="fas fa-clock"></i>
-                                    {{ $post->created_at->format('d/m/Y H:i') }}
-                                </span>
-                            </div>
-
-                            {{-- Thêm class cho phần nội dung --}}
-                            <p class="post-excerpt">{{ Str::limit($post->content, 200) }}</p>
-
-                            {{-- Cải thiện nút xem chi tiết --}}
-                            <div class="d-flex justify-content-end">
-                                <a href="{{ route('posts.show', $post) }}" class="btn btn-view-post">
-                                    <i class="fas fa-eye"></i> Xem chi tiết
-                                </a>
-                            </div>
+                        </h5>
+                        <div class="post-meta">
+                            <span><i class="fas fa-user"></i> {{ $post->user->name }}</span>
+                            <span><i class="fas fa-clock"></i> {{ $post->created_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <p class="post-excerpt">{{ Str::limit($post->content, 200) }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ route('posts.show', $post) }}" class="btn btn-view-post">
+                                <i class="fas fa-eye"></i> Xem chi tiết
+                            </a>
+                            
+                            <button class="like-button {{ $post->isLikedBy(auth()->user()) ? 'liked' : '' }}" 
+                                    data-post-id="{{ $post->id }}" 
+                                    data-liked="{{ $post->isLikedBy(auth()->user()) ? 'true' : 'false' }}">
+                                <i class="fas fa-heart"></i>
+                                <span class="likes-count">{{ $post->likes_count }}</span>
+                            </button>
                         </div>
                     </div>
                 </div>
-            @endforeach
-        </div>
-        
-        {{-- Phân trang đã được style tự động qua CSS ở trên --}}
-        <div class="d-flex justify-content-center mt-4">
-            {{ $posts->links() }}
-        </div>
-    @else
-        {{-- Thêm class custom-alert --}}
-        <div class="alert custom-alert">
-            Chưa có bài viết nào được đăng. <a href="{{ route('posts.create') }}">Hãy là người đầu tiên đăng bài</a>
-        </div>
-    @endif
-</div>
+            @empty
+                <div class="alert custom-alert">
+                    Chưa có bài viết nào. <a href="{{ route('posts.create') }}">Hãy là người đầu tiên đăng bài</a>
+                </div>
+            @endforelse
 
-{{-- Thêm JavaScript cho hiệu ứng --}}
+            <div class="d-flex justify-content-center">
+                {{ $posts->links() }}
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Thêm hiệu ứng hover cho các card
-    const cards = document.querySelectorAll('.post-card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
+    const likeButtons = document.querySelectorAll('.like-button');
+    
+    likeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const icon = this.querySelector('i');
+            const countSpan = this.querySelector('.likes-count');
+            
+            fetch(`/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.liked) {
+                    this.classList.add('liked');
+                } else {
+                    this.classList.remove('liked');
+                }
+                countSpan.textContent = data.likes_count;
+            })
+            .catch(error => console.error('Error:', error));
         });
     });
 });
 </script>
-@endpush
-@endsection 
+@endpush 

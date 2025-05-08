@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Model đại diện cho một người dùng (User) trong hệ thống.
@@ -95,12 +96,17 @@ class User extends Authenticatable
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function posts()
+    public function posts(): HasMany
     {
-        // `hasMany` định nghĩa quan hệ một-nhiều.
-        // Tham số thứ nhất: Tên lớp Model liên quan (Post).
-        // Laravel sẽ tự động tìm khóa ngoại `user_id` trong bảng `posts`.
         return $this->hasMany(Post::class);
+    }
+
+    /**
+     * Get the likes for the user.
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
     }
 
     /**

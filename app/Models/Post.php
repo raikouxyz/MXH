@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Model đại diện cho một bài viết (Post) trong ứng dụng.
@@ -27,19 +29,47 @@ class Post extends Model
         'is_public'   // Trạng thái công khai/riêng tư của bài viết (boolean)
     ];
 
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
+
     /**
      * Định nghĩa quan hệ một-nhiều (ngược): Một bài viết thuộc về một người dùng (User).
      * Liên kết đến User model thông qua khóa ngoại 'user_id'.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function user()
+    public function user(): BelongsTo
     {
         // `belongsTo` xác định quan hệ ngược của `hasMany`.
         // Tham số thứ nhất: Model liên quan (User).
         // Laravel sẽ tự động xác định khóa ngoại dựa trên tên phương thức ('user' -> 'user_id').
         // Nếu tên khóa ngoại khác, bạn cần truyền nó làm tham số thứ hai.
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the likes for the post.
+     */
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
+     * Check if the post is liked by the given user.
+     */
+    public function isLikedBy(User $user): bool
+    {
+        return $this->likes()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * Get the number of likes for the post.
+     */
+    public function getLikesCountAttribute(): int
+    {
+        return $this->likes()->count();
     }
 
     /**
