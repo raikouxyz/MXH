@@ -11,6 +11,8 @@ use App\Http\Controllers\GroupMessageController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\PasswordController;
 
+
+
 // Route mặc định, hiển thị trang chào mừng
 Route::get('/', function () {
     return view('welcome');
@@ -96,7 +98,7 @@ Route::get('/dashboard', function () {
  * - User có quyền admin (AdminMiddleware)
  * - Prefix tất cả routes với 'admin'
  */
-Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])->prefix('admin')->group(function () {
+Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
     // Trang dashboard của admin
     Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
 
@@ -111,4 +113,7 @@ Route::middleware(['web', 'auth', \App\Http\Middleware\AdminMiddleware::class])-
     Route::get('/posts/{id}/edit', [AdminController::class, 'editPost'])->name('admin.posts.edit'); // Form sửa post
     Route::put('/posts/{id}', [AdminController::class, 'updatePost'])->name('admin.posts.update'); // Cập nhật post
     Route::delete('/posts/{id}', [AdminController::class, 'deletePost'])->name('admin.posts.delete'); // Xóa post
+
+
+
 });
