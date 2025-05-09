@@ -196,9 +196,7 @@
         <div class="col-md-8">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="page-title mb-0">Bảng tin</h2>
-                <a href="{{ route('posts.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Tạo bài viết mới
-                </a>
+                
             </div>
 
             @if(session('success'))
