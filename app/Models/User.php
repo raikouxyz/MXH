@@ -71,7 +71,24 @@ class User extends Authenticatable
     }
 
     /**
+<<<<<<< Updated upstream
      * Lấy tin nhắn đã gửi
+=======
+     * Định nghĩa quan hệ một-nhiều: Một người dùng có thể thích nhiều bài viết.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
+     * Định nghĩa quan hệ một-nhiều: Một người dùng (User) có thể gửi nhiều tin nhắn 1-1 (Message).
+     * Liên kết qua khóa ngoại 'sender_id' trong bảng 'messages'.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+>>>>>>> Stashed changes
      */
     public function sentMessages()
     {

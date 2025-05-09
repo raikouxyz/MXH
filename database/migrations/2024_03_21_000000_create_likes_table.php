@@ -15,10 +15,16 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('post_id')->constrained()->onDelete('cascade');
+<<<<<<< Updated upstream
             $table->enum('type', ['like', 'dislike'])->default('like');
             $table->timestamps();
 
             // Prevent duplicate reactions from the same user on the same post
+=======
+            $table->timestamps();
+
+            // Prevent duplicate likes from the same user on the same post
+>>>>>>> Stashed changes
             $table->unique(['user_id', 'post_id']);
         });
     }

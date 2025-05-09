@@ -11,8 +11,12 @@ class Like extends Model
 
     protected $fillable = [
         'user_id',
+<<<<<<< Updated upstream
         'post_id',
         'type'
+=======
+        'post_id'
+>>>>>>> Stashed changes
     ];
 
     public function user()

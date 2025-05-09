@@ -11,8 +11,11 @@ use App\Http\Controllers\GroupMessageController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\LikeController;
+<<<<<<< Updated upstream
 
 
+=======
+>>>>>>> Stashed changes
 
 // Route mặc định, hiển thị trang chào mừng
 Route::get('/', function () {

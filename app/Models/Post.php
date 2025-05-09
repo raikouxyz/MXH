@@ -29,7 +29,37 @@ class Post extends Model
     }
 
     /**
+<<<<<<< Updated upstream
      * Một số truy vấn phổ biến có thể sử dụng
+=======
+     * Định nghĩa quan hệ một-nhiều: Một bài viết có thể có nhiều lượt thích (Like).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    /**
+     * Kiểm tra xem bài viết có được thích bởi một người dùng cụ thể không.
+     *
+     * @param int $userId ID của người dùng cần kiểm tra
+     * @return bool
+     */
+    public function isLikedBy($userId)
+    {
+        return $this->likes()->where('user_id', $userId)->exists();
+    }
+
+    /**
+     * Định nghĩa một Local Query Scope để lọc các bài viết công khai.
+     * Cho phép tái sử dụng logic query này một cách dễ dàng.
+     * Cách dùng: Post::public()->get();
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query Instance của Query Builder
+     * @return \Illuminate\Database\Eloquent\Builder
+>>>>>>> Stashed changes
      */
     public function scopePublic($query)
     {
