@@ -16,6 +16,7 @@ use App\Http\Controllers\GroupPostLikeController;
 use App\Http\Controllers\GroupPostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\GroupPostFavoriteController;
+use App\Http\Controllers\FollowController;
 
 // Route mặc định, hiển thị trang chào mừng
 Route::get('/', function () {
@@ -131,7 +132,11 @@ Route::middleware('auth')->group(function () {
     Route::post('group-posts/{post}/favorite', [GroupPostFavoriteController::class, 'toggle'])->name('group-posts.favorites.toggle');
 
     // Routes quản lý theo dõi người dùng
-    Route::post('/users/{user}/follow', [UserController::class, 'follow'])->name('users.follow');
+    Route::post('/users/{user}/follow', [FollowController::class, 'follow'])->name('users.follow');
+    Route::post('/users/{user}/unfollow', [FollowController::class, 'unfollow'])->name('users.unfollow');
+    Route::get('/users/{user}/followers', [FollowController::class, 'getFollowers'])->name('users.followers');
+    Route::get('/users/{user}/following', [FollowController::class, 'getFollowing'])->name('users.following');
+    Route::get('/users/{user}/check-follow', [FollowController::class, 'checkFollowStatus'])->name('users.check-follow');
 });
 
 /**

@@ -504,8 +504,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const userId = this.dataset.userId;
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             const followText = this.querySelector('.follow-text');
-            
-            fetch(`/users/${userId}/follow`, {
+            const isFollowing = followText.textContent.trim() === 'Đã theo dõi' || followText.textContent.trim() === 'Bỏ theo dõi';
+
+            // Chọn route phù hợp
+            const url = isFollowing ? `/users/${userId}/unfollow` : `/users/${userId}/follow`;
+
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': csrfToken,
@@ -514,19 +518,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 credentials: 'same-origin'
             })
-            .then(response => {
+            .then(async response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    const errorData = await response.json().catch(() => ({}));
+                    let message = errorData.message || 'Có lỗi xảy ra khi thực hiện thao tác theo dõi';
+                    throw new Error(message);
                 }
                 return response.json();
             })
             .then(data => {
-                // Tự động tải lại trang sau khi thao tác thành công
-                window.location.reload();
+                // Đổi trạng thái nút
+                if (isFollowing) {
+                    followText.textContent = 'Theo dõi';
+                    this.classList.remove('btn-primary');
+                    this.classList.add('btn-outline-primary');
+                } else {
+                    followText.textContent = 'Đã theo dõi';
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-primary');
+                }
+
+                // Cập nhật số lượng người theo dõi nếu có phần tử hiển thị
+                const followersCountElem = document.querySelector('.stats-item .mb-0');
+                if (followersCountElem) {
+                    let count = parseInt(followersCountElem.textContent);
+                    if (!isNaN(count)) {
+                        if (isFollowing) {
+                            followersCountElem.textContent = count - 1;
+                        } else {
+                            followersCountElem.textContent = count + 1;
+                        }
+                    }
+                }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra khi thực hiện thao tác theo dõi');
+                alert(error.message);
             });
         });
     });
