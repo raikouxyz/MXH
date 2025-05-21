@@ -59,21 +59,21 @@
                         {{-- Tổng số bài viết --}}
                         <div class="col-md-4">
                             <div class="stats-item text-center p-3">
-                                <h3 class="mb-0">{{ $user->posts()->count() }}</h3>
+                                <h3 class="mb-0 posts-count">{{ $user->posts()->count() }}</h3>
                                 <p class="text-muted mb-0">Tổng bài viết</p>
                             </div>
                         </div>
                         {{-- Số người theo dõi --}}
                         <div class="col-md-4">
                             <div class="stats-item text-center p-3">
-                                <h3 class="mb-0">{{ $user->followers()->count() }}</h3>
+                                <h3 class="mb-0 followers-count">{{ $user->followers()->count() }}</h3>
                                 <p class="text-muted mb-0">Người theo dõi</p>
                             </div>
                         </div>
                         {{-- Số người đang theo dõi --}}
                         <div class="col-md-4">
                             <div class="stats-item text-center p-3">
-                                <h3 class="mb-0">{{ $user->following()->count() }}</h3>
+                                <h3 class="mb-0 following-count">{{ $user->following()->count() }}</h3>
                                 <p class="text-muted mb-0">Đang theo dõi</p>
                             </div>
                         </div>
@@ -198,7 +198,7 @@
                                         <button class="btn {{ auth()->user()->isFollowing($follower) ? 'btn-primary' : 'btn-outline-primary' }} btn-sm follow-button" 
                                                 data-user-id="{{ $follower->id }}">
                                             <i class="fas fa-user-plus"></i> 
-                                            <span class="follow-text">{{ auth()->user()->isFollowing($follower) ? 'Đã theo dõi' : 'Theo dõi' }}</span>
+                                            <span class="follow-text">{{ auth()->user()->isFollowing($follower) ? ' Đã theo dõi' : 'Theo dõi' }}</span>
                                         </button>
                                     </div>
                                 @endif
@@ -217,9 +217,9 @@
 
         {{-- Tab Đang theo dõi --}}
         <div class="tab-pane fade" id="following-pane" role="tabpanel" aria-labelledby="following-tab">
-            <div class="row">
+            <div class="row" id="following-list">
                 @forelse($user->following as $following)
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 mb-3 following-item" data-user-id="{{ $following->id }}">
                         <div class="card">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
@@ -372,6 +372,8 @@
 
 @push('scripts')
 <script>
+window.profileId = {{ $user->id }};
+
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('groupSearchInput');
     const searchResults = document.getElementById('groupSearchResults');
@@ -499,62 +501,74 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Xử lý sự kiện follow
-    document.querySelectorAll('.follow-button').forEach(button => {
-        button.addEventListener('click', function() {
-            const userId = this.dataset.userId;
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            const followText = this.querySelector('.follow-text');
-            const isFollowing = followText.textContent.trim() === 'Đã theo dõi' || followText.textContent.trim() === 'Bỏ theo dõi';
+    function followButtonHandler() {
+        const userId = this.dataset.userId;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const followText = this.querySelector('.follow-text');
+        const isFollowing = followText.textContent.trim() === 'Đã theo dõi' || followText.textContent.trim() === 'Bỏ theo dõi';
 
-            // Chọn route phù hợp
-            const url = isFollowing ? `/users/${userId}/unfollow` : `/users/${userId}/follow`;
+        this.disabled = true;
 
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'same-origin'
-            })
-            .then(async response => {
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    let message = errorData.message || 'Có lỗi xảy ra khi thực hiện thao tác theo dõi';
-                    throw new Error(message);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Đổi trạng thái nút
-                if (isFollowing) {
-                    followText.textContent = 'Theo dõi';
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-outline-primary');
-                } else {
-                    followText.textContent = 'Đã theo dõi';
-                    this.classList.remove('btn-outline-primary');
-                    this.classList.add('btn-primary');
-                }
+        const url = isFollowing ? `/users/${userId}/unfollow` : `/users/${userId}/follow`;
 
-                // Cập nhật số lượng người theo dõi nếu có phần tử hiển thị
-                const followersCountElem = document.querySelector('.stats-item .mb-0');
-                if (followersCountElem) {
-                    let count = parseInt(followersCountElem.textContent);
-                    if (!isNaN(count)) {
-                        if (isFollowing) {
-                            followersCountElem.textContent = count - 1;
-                        } else {
-                            followersCountElem.textContent = count + 1;
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(async response => {
+            this.disabled = false;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                let message = errorData.message || 'Có lỗi xảy ra khi thực hiện thao tác theo dõi';
+                throw new Error(message);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Đổi trạng thái nút
+            if (isFollowing) {
+                followText.textContent = 'Theo dõi';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-outline-primary');
+            } else {
+                followText.textContent = 'Đã theo dõi';
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary');
+            }
+
+            // Luôn fetch lại danh sách following để đảm bảo số lượng và danh sách đúng
+            fetch(`/users/${window.profileId}/following-list`)
+                .then(res => res.text())
+                .then(html => {
+                    const followingList = document.getElementById('following-list');
+                    if (followingList) {
+                        followingList.innerHTML = html;
+                        // Gắn lại sự kiện cho nút follow/unfollow mới render
+                        followingList.querySelectorAll('.follow-button').forEach(button => {
+                            button.addEventListener('click', followButtonHandler);
+                        });
+                        // Cập nhật lại số lượng "Đang theo dõi" dựa trên số lượng item thực tế
+                        const newCount = followingList.querySelectorAll('.following-item').length;
+                        const followingCount = document.querySelector('.following-count');
+                        if (followingCount) {
+                            followingCount.textContent = newCount;
                         }
                     }
-                }
-            })
-            .catch(error => {
-                alert(error.message);
-            });
+                });
+        })
+        .catch(error => {
+            alert(error.message);
         });
+    }
+
+    // Gắn sự kiện cho tất cả nút follow
+    document.querySelectorAll('.follow-button').forEach(button => {
+        button.addEventListener('click', followButtonHandler);
     });
 });
 </script>

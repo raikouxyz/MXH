@@ -137,6 +137,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/users/{user}/followers', [FollowController::class, 'getFollowers'])->name('users.followers');
     Route::get('/users/{user}/following', [FollowController::class, 'getFollowing'])->name('users.following');
     Route::get('/users/{user}/check-follow', [FollowController::class, 'checkFollowStatus'])->name('users.check-follow');
+    Route::get('/users/{user}/following-list', [\App\Http\Controllers\FollowController::class, 'followingList'])->name('users.following-list');
 });
 
 /**
