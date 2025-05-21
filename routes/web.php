@@ -16,8 +16,12 @@ use App\Http\Controllers\GroupPostLikeController;
 use App\Http\Controllers\GroupPostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\GroupPostFavoriteController;
+//<<<<<<< theo-doi-Hung
+use App\Http\Controllers\FollowController;
+//=======
 use App\Http\Controllers\GroupCommentController;
 use App\Http\Controllers\StoryController;
+//>>>>>>> main
 
 // Route mặc định, hiển thị trang chào mừng
 Route::get('/', function () {
@@ -139,20 +143,12 @@ Route::middleware('auth')->group(function () {
     Route::post('group-posts/{post}/favorite', [GroupPostFavoriteController::class, 'toggle'])->name('group-posts.favorites.toggle');
 
     // Routes quản lý theo dõi người dùng
-    Route::post('/users/{user}/follow', [UserController::class, 'follow'])->name('users.follow');
-
-    // Routes quản lý bình luận trong nhóm
-    Route::post('/groups/posts/{post}/comments', [GroupCommentController::class, 'store'])->name('groups.posts.comments.store');
-
-    // Routes quản lý bài viết yêu thích của người dùng
-    Route::get('/my-favorited-posts', [PostController::class, 'myFavoritedPosts'])->name('posts.my_favorited');
-
-    // Routes quản lý story
-    Route::get('/stories', [StoryController::class, 'index'])->name('stories.index');
-    Route::get('/stories/create', [StoryController::class, 'create'])->name('stories.create');
-    Route::post('/stories', [StoryController::class, 'store'])->name('stories.store');
-    Route::get('/stories/{story}', [StoryController::class, 'show'])->name('stories.show');
-    Route::delete('/stories/{story}', [StoryController::class, 'destroy'])->name('stories.destroy');
+    Route::post('/users/{user}/follow', [FollowController::class, 'follow'])->name('users.follow');
+    Route::post('/users/{user}/unfollow', [FollowController::class, 'unfollow'])->name('users.unfollow');
+    Route::get('/users/{user}/followers', [FollowController::class, 'getFollowers'])->name('users.followers');
+    Route::get('/users/{user}/following', [FollowController::class, 'getFollowing'])->name('users.following');
+    Route::get('/users/{user}/check-follow', [FollowController::class, 'checkFollowStatus'])->name('users.check-follow');
+    Route::get('/users/{user}/following-list', [FollowController::class, 'followingList'])->name('users.following-list');
 });
 
 /**
