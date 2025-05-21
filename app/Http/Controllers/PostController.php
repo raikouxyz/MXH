@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Report;
+use App\Models\Story;
 
 /**
  * Controller quản lý các chức năng liên quan đến bài viết (Posts)
@@ -33,7 +34,16 @@ class PostController extends Controller
             ->withCount('members')
             ->get();
 
-        return view('posts.index', compact('posts', 'groups'));
+        // Lấy stories của người dùng đang theo dõi và của chính mình
+        $stories = Story::with('user')
+            ->active()
+            ->fromFollowing(auth()->id())
+            ->orWhere('user_id', auth()->id())
+            ->latest()
+            ->get()
+            ->groupBy('user_id');
+
+        return view('posts.index', compact('posts', 'groups', 'stories'));
     }
 
     /**
@@ -242,19 +252,33 @@ class PostController extends Controller
 
     public function report(Request $request, Post $post)
     {
+        $request->validate([
+            'reason' => 'required|string',
+            'other_reason' => 'required_if:reason,other|string|max:500'
+        ]);
+
         $reason = $request->input('reason');
         if ($reason === 'other') {
             $reason = $request->input('other_reason');
         }
         
-        // Lưu báo cáo vào database
+        // Check if user has already reported this post
+        $existingReport = Report::where('post_id', $post->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($existingReport) {
+            return redirect()->back()->with('error', 'Bạn đã báo cáo bài viết này trước đó.');
+        }
+        
+        // Create new report
         Report::create([
             'post_id' => $post->id,
             'user_id' => auth()->id(),
             'reason' => $reason
         ]);
         
-        return redirect()->back()->with('success', 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét nội dung này.');
+        return redirect()->back()->with('success', 'Cảm ơn bạn đã báo cáo. Chúng tôi sẽ xem xét nội dung này trong thời gian sớm nhất.');
     }
 
     public function toggleFavorite(Post $post)
@@ -282,5 +306,21 @@ class PostController extends Controller
         }
 
         return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * Hiển thị danh sách các bài viết mà người dùng hiện tại đã yêu thích.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function myFavoritedPosts()
+    {
+        $user = auth()->user();
+
+        // Lấy các bài viết yêu thích của người dùng hiện tại, kèm thông tin người đăng
+        $favoritedPosts = $user->favoritedPosts()->with('user')->latest()->paginate(10);
+
+        // Trả về view, truyền kèm danh sách bài viết yêu thích và đối tượng user
+        return view('posts.my_favorited_posts', compact('favoritedPosts', 'user'));
     }
 } 
