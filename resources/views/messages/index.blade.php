@@ -18,8 +18,8 @@
                     <!-- Tab navigation -->
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="nav-item">
-                            <a class="nav-link active" data-bs-toggle="tab" href="#users-tab">
-                                Người dùng
+                            <a class="nav-link" data-bs-toggle="tab" href="#friends-tab">
+                                Bạn bè
                             </a>
                         </li>
                         <li class="nav-item">
@@ -31,25 +31,26 @@
 
                     <!-- Tab content -->
                     <div class="tab-content">
-                        <!-- Danh sách người dùng -->
-                        <div class="tab-pane fade show active" id="users-tab">
-                            <div class="list-group list-group-flush" id="users-list">
-                                @foreach($users as $user)
-                                    
+                        
+
+                        <!-- Danh sách bạn bè -->
+                        <div class="tab-pane fade" id="friends-tab">
+                            <div class="list-group list-group-flush" id="friends-list">
+                                @forelse(auth()->user()->friends as $friend)
                                     @php
                                         // Lấy số tin nhắn chưa đọc từ người dùng này
-                                        $unreadCount = auth()->user()->getUnreadMessagesFrom($user->id);
+                                        $unreadCount = auth()->user()->getUnreadMessagesFrom($friend->id);
                                         // Lấy tin nhắn cuối cùng
-                                        $lastMessage = auth()->user()->getLastMessageWith($user->id);
+                                        $lastMessage = auth()->user()->getLastMessageWith($friend->id);
                                     @endphp
 
-                                    <a href="{{ route('messages.show', $user->id) }}" 
-                                       class="list-group-item list-group-item-action user-chat-item {{ $selectedUser && $selectedUser->id == $user->id ? 'active' : '' }}"
-                                       data-user-id="{{ $user->id }}">
+                                    <a href="{{ route('messages.show', $friend->id) }}" 
+                                       class="list-group-item list-group-item-action user-chat-item {{ $selectedUser && $selectedUser->id == $friend->id ? 'active' : '' }}"
+                                       data-user-id="{{ $friend->id }}">
                                         <div class="d-flex align-items-center">
                                             <!-- Avatar người dùng -->
                                             <div class="position-relative">
-                                                <img src="{{ $user->avatar_url }}" 
+                                                <img src="{{ $friend->avatar_url }}" 
                                                      class="rounded-circle me-2" 
                                                      style="width: 40px; height: 40px; object-fit: cover;">
                                                 @if($unreadCount > 0)
@@ -63,7 +64,7 @@
                                             <!-- Thông tin người dùng và tin nhắn -->
                                             <div class="flex-grow-1 min-width-0">
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h6 class="mb-0">{{ $user->name }}</h6>
+                                                    <h6 class="mb-0">{{ $friend->name }}</h6>
                                                     @if($lastMessage)
                                                         <small class="text-muted">
                                                             {{ $lastMessage->created_at->diffForHumans(null, true) }}
@@ -79,7 +80,14 @@
                                             </div>
                                         </div>
                                     </a>
-                                @endforeach
+                                @empty
+                                    <div class="list-group-item text-center text-muted">
+                                        <p class="mb-2">Bạn chưa có bạn bè nào</p>
+                                        <a href="{{ route('users.index') }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-user-plus"></i> Tìm bạn mới
+                                        </a>
+                                    </div>
+                                @endforelse
                             </div>
                         </div>
 
@@ -603,7 +611,13 @@
 document.addEventListener('DOMContentLoaded', function() {
     const messageContainer = document.getElementById('message-container');
     const messageForm = document.getElementById('message-form');
-    const usersList = document.getElementById('users-list');
+    
+    // Tự động chọn tab bạn bè khi load trang
+    const friendsTab = document.querySelector('a[href="#friends-tab"]');
+    if (friendsTab) {
+        const tab = new bootstrap.Tab(friendsTab);
+        tab.show();
+    }
     
     // Cuộn xuống cuối cùng
     function scrollToBottom() {
@@ -675,58 +689,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }, 5000);
     }
-
-    // Thêm function cập nhật danh sách người dùng
-    function updateUsersList() {
-        fetch('/messages/users/status')
-            .then(response => response.json())
-            .then(data => {
-                // Cập nhật trạng thái cho từng người dùng
-                data.users.forEach(user => {
-                    const userItem = document.querySelector(`.user-chat-item[data-user-id="${user.id}"]`);
-                    if (userItem) {
-                        // Cập nhật số tin nhắn chưa đọc
-                        const badge = userItem.querySelector('.badge');
-                        if (user.unread_count > 0) {
-                            if (badge) {
-                                badge.textContent = user.unread_count;
-                            } else {
-                                const avatarContainer = userItem.querySelector('.position-relative');
-                                avatarContainer.insertAdjacentHTML('beforeend', `
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                        ${user.unread_count}
-                                    </span>
-                                `);
-                            }
-                            userItem.classList.add('has-unread');
-                        } else {
-                            if (badge) {
-                                badge.remove();
-                            }
-                            userItem.classList.remove('has-unread');
-                        }
-
-                        // Cập nhật tin nhắn cuối cùng nếu có
-                        if (user.last_message) {
-                            const messagePreview = userItem.querySelector('p.small');
-                            if (messagePreview) {
-                                messagePreview.textContent = user.last_message.sender_id === {{ auth()->id() }}
-                                    ? `Bạn: ${user.last_message.content}`
-                                    : user.last_message.content;
-                                messagePreview.className = `mb-0 small text-truncate ${
-                                    !user.last_message.is_read && user.last_message.receiver_id === {{ auth()->id() }}
-                                        ? 'fw-bold'
-                                        : 'text-muted'
-                                }`;
-                            }
-                        }
-                    }
-                });
-            });
-    }
-
-    // Cập nhật danh sách người dùng mỗi 5 giây
-    setInterval(updateUsersList, 5000);
 });
 
 function toggleEmojiPicker() {

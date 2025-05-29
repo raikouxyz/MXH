@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit'); // Hiển thị form chỉnh sửa profile
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update'); // Cập nhật thông tin profile
     Route::get('/profile/friends', [ProfileController::class, 'friends'])->name('profile.friends'); // Hiển thị danh sách bạn bè
+    Route::get('/profile/{user}', [ProfileController::class, 'show'])->name('profile.show'); // Hiển thị trang cá nhân của người dùng
     
     // Routes xóa tài khoản
     Route::get('/profile/delete', [ProfileController::class, 'showDeleteAccount'])->name('profile.delete');
