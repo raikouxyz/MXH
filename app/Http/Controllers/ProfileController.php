@@ -14,6 +14,35 @@ use App\Models\User;
 class ProfileController extends Controller
 {
     /**
+     * Hiển thị trang hồ sơ của người dùng
+     *
+     * @param  \App\Models\User  $user
+     * @return \Illuminate\View\View
+     */
+    public function show(User $user)
+    {
+        // Lấy thông tin bài viết của người dùng
+        $posts = $user->posts()->with(['user', 'likes', 'comments'])->latest()->paginate(10);
+        
+        // Lấy thông tin bạn bè của người dùng
+        $friends = $user->friends()->paginate(12);
+        
+        // Lấy số lượng bạn bè
+        $friendsCount = $user->friends()->count();
+        
+        // Lấy số lượng bài viết
+        $postsCount = $user->posts()->count();
+        
+        return view('profile.show', [
+            'user' => $user,
+            'posts' => $posts,
+            'friends' => $friends,
+            'friendsCount' => $friendsCount,
+            'postsCount' => $postsCount
+        ]);
+    }
+
+    /**
      * Hiển thị form chỉnh sửa thông tin cá nhân của người dùng đang đăng nhập.
      *
      * @return \Illuminate\View\View

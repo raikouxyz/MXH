@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             FollowSeeder::class,
             EventSeeder::class,
             ReportSeeder::class,
+            FriendAndLikeSeeder::class,
         ]);
     }
 }

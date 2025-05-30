@@ -198,31 +198,47 @@ class UserController extends Controller
 
             DB::beginTransaction();
 
-            // Xóa mối quan hệ ở cả hai chiều
+            // Xóa mối quan hệ bạn bè ở cả hai chiều
             DB::table('friends')
-                ->where(function($query) use ($currentUser, $user) {
+                ->where(function ($query) use ($currentUser, $user) {
                     $query->where('user_id', $currentUser->id)
                           ->where('friend_id', $user->id);
                 })
-                ->orWhere(function($query) use ($currentUser, $user) {
+                ->orWhere(function ($query) use ($currentUser, $user) {
                     $query->where('user_id', $user->id)
                           ->where('friend_id', $currentUser->id);
                 })
                 ->delete();
 
-            // Gửi thông báo cho người bị hủy kết bạn nếu đã là bạn bè
-            if ($currentUser->isFriendWith($user)) {
-                $user->notify(new \App\Notifications\FriendRemovedNotification($currentUser));
-            }
+            // Xóa tất cả thông báo liên quan
+            DB::table('notifications')
+                ->where(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $currentUser->id)
+                          ->where('type', 'App\Notifications\FriendRequestNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.sender_id') = ?", [$user->id]);
+                })
+                ->orWhere(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $user->id)
+                          ->where('type', 'App\Notifications\FriendRequestAcceptedNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.accepter_id') = ?", [$currentUser->id]);
+                })
+                ->delete();
 
             DB::commit();
 
+            // Gửi thông báo cho người kia
+            $user->notify(new \App\Notifications\FriendRemovedNotification($currentUser));
+
             return response()->json([
                 'success' => true,
-                'message' => $currentUser->isFriendWith($user) ? 'Đã hủy kết bạn thành công' : 'Đã hủy lời mời kết bạn',
+                'message' => 'Đã hủy kết bạn thành công',
                 'isFriend' => false,
-                'hasPendingRequest' => false
+                'hasPendingRequest' => false,
+                'hasSentRequest' => false,
+                'hasReceivedRequest' => false,
+                'reload' => true // Thêm flag để reload trang
             ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Error removing friend: ' . $e->getMessage());
@@ -288,6 +304,13 @@ class UserController extends Controller
      */
     public function acceptFriendRequest(User $user)
     {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để thực hiện chức năng này'
+            ], 401);
+        }
+
         $currentUser = auth()->user();
 
         try {
@@ -299,33 +322,56 @@ class UserController extends Controller
                 ]);
             }
 
-            // Cập nhật trạng thái lời mời kết bạn thành accepted
+            DB::beginTransaction();
+
+            // Xóa lời mời kết bạn cũ
             DB::table('friends')
                 ->where('user_id', $user->id)
                 ->where('friend_id', $currentUser->id)
                 ->where('status', 'pending')
-                ->update([
-                    'status' => 'accepted',
-                    'updated_at' => now()
-                ]);
+                ->delete();
 
-            // Thêm mối quan hệ bạn bè ngược lại
+            // Thêm mối quan hệ bạn bè ở cả hai chiều
             DB::table('friends')->insert([
-                'user_id' => $currentUser->id,
-                'friend_id' => $user->id,
-                'status' => 'accepted',
-                'created_at' => now(),
-                'updated_at' => now()
+                [
+                    'user_id' => $currentUser->id,
+                    'friend_id' => $user->id,
+                    'status' => 'accepted',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ],
+                [
+                    'user_id' => $user->id,
+                    'friend_id' => $currentUser->id,
+                    'status' => 'accepted',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]
             ]);
 
-            // Gửi thông báo cho người gửi lời mời
-            $user->notify(new \App\Notifications\FriendRequestAcceptedNotification($currentUser));
+            // Xóa tất cả thông báo liên quan
+            DB::table('notifications')
+                ->where(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $currentUser->id)
+                          ->where('type', 'App\Notifications\FriendRequestNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.sender_id') = ?", [$user->id]);
+                })
+                ->orWhere(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $user->id)
+                          ->where('type', 'App\Notifications\FriendRequestNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.receiver_id') = ?", [$currentUser->id]);
+                })
+                ->delete();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Đã chấp nhận lời mời kết bạn thành công',
                 'isFriend' => true,
                 'hasPendingRequest' => false,
+                'hasSentRequest' => false,
+                'hasReceivedRequest' => false,
                 'senderName' => $user->name,
                 'currentUserName' => $currentUser->name,
                 'friend' => [
@@ -333,9 +379,16 @@ class UserController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar' => $user->avatar_url
-                ]
+                ],
+                'updateUI' => [
+                    'removeNotification' => true,
+                    'notificationType' => 'friend_request',
+                    'senderId' => $user->id
+                ],
+                'csrf_token' => csrf_token()
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             \Log::error('Error accepting friend request: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -349,6 +402,13 @@ class UserController extends Controller
      */
     public function rejectFriendRequest(User $user)
     {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Vui lòng đăng nhập để thực hiện chức năng này'
+            ], 401);
+        }
+
         $currentUser = auth()->user();
         
         try {
@@ -360,14 +420,41 @@ class UserController extends Controller
                 ], 400);
             }
 
+            DB::beginTransaction();
+
             // Xóa lời mời kết bạn (chiều nhận)
             $currentUser->pendingFriendRequests()->detach($user->id);
 
+            // Xóa tất cả thông báo liên quan
+            DB::table('notifications')
+                ->where(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $currentUser->id)
+                          ->where('type', 'App\Notifications\FriendRequestNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.sender_id') = ?", [$user->id]);
+                })
+                ->orWhere(function($query) use ($currentUser, $user) {
+                    $query->where('notifiable_id', $user->id)
+                          ->where('type', 'App\Notifications\FriendRequestNotification')
+                          ->whereRaw("JSON_EXTRACT(data, '$.receiver_id') = ?", [$currentUser->id]);
+                })
+                ->delete();
+
+            DB::commit();
+
             return response()->json([
                 'success' => true, 
-                'message' => 'Đã từ chối lời mời kết bạn.'
+                'message' => 'Đã từ chối lời mời kết bạn.',
+                'hasPendingRequest' => false,
+                'hasReceivedRequest' => false,
+                'updateUI' => [
+                    'removeNotification' => true,
+                    'notificationType' => 'friend_request',
+                    'senderId' => $user->id
+                ],
+                'csrf_token' => csrf_token()
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             \Log::error('Error rejecting friend request: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
