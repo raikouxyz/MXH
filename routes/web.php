@@ -139,6 +139,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/posts/{post}/report', [UserReportController::class, 'store'])->name('posts.report');
 
     // Routes quản lý kết bạn
+    Route::get('/users', [UserController::class, 'index'])->name('users.index'); // Danh sách người dùng
     Route::post('/users/{user}/add-friend', [UserController::class, 'addFriend'])->name('users.add-friend');
     Route::delete('/users/{user}/remove-friend', [UserController::class, 'removeFriend'])->name('users.remove-friend');
     Route::post('/users/{user}/accept-friend-request', [UserController::class, 'acceptFriendRequest'])->name('users.accept-friend-request');
